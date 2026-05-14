@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    name: Validate skills
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate SKILL.md frontmatter
+        run: |
+          set -e
+          failed=0
+
+          for skill_dir in */; do
+            skill_file="${skill_dir}SKILL.md"
+
+            if [ ! -f "$skill_file" ]; then
+              echo "MISSING: $skill_file"
+              failed=1
+              continue
+            fi
+
+            # Extract frontmatter block between the first pair of ---
+            frontmatter=$(awk '/^---/{found++; if(found==2) exit} found==1 && !/^---/' "$skill_file")
+
+            name=$(echo "$frontmatter" | grep '^name:' | head -1)
+            description=$(echo "$frontmatter" | grep '^description:' | head -1)
+
+            if [ -z "$name" ]; then
+              echo "INVALID: $skill_file — missing 'name' field"
+              failed=1
+            fi
+
+            if [ -z "$description" ]; then
+              echo "INVALID: $skill_file — missing 'description' field"
+              failed=1
+            fi
+
+            if [ $failed -eq 0 ]; then
+              echo "OK: $skill_file"
+            fi
+          done
+
+          exit $failed
