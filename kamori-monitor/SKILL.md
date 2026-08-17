@@ -45,13 +45,23 @@ alert_summary(minutes=15, service=<name>, level=<level>)
 
 Record the pre-session error count as a baseline number.
 
-### Step 2 — Anchor to current tail
+### Step 2 — Anchor the tail
+
+**Live-only (default) — anchor at the current tail:**
 
 ```
 tail_logs(after_id=0, service=<name>, level=<level>, limit=1)
 ```
 
 Get the current last log id. This is your cursor — you will poll forward from here. If no rows exist, `last_id` will be 0.
+
+**Catch-up-then-live — anchor from a timestamp:** if the user wants to include recent history ("watch auth from 09:00", "since the deploy 10 minutes ago"), anchor by time instead of id. Pass `since` (ISO-8601) and omit `after_id`; it resolves once to a starting cursor, then tailing continues by id:
+
+```
+tail_logs(since=<ISO-8601 start>, service=<name>, level=<level>, limit=50)
+```
+
+Replay those rows, then take the returned `last_id` as your cursor. `since` anchors on `received_at` (server ingest time); `after_id` wins if both are set.
 
 Report to the user: "Monitoring started. Anchored at log id [last_id]. Watching for [level] logs from [service]..."
 
